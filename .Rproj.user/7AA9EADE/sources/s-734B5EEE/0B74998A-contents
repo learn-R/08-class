@@ -1,0 +1,65 @@
+
+# Procesamiento de datos práctico 07 --------------------------------------
+
+pacman::p_load(tidyverse,
+               dplyr, 
+               car,
+               haven,
+               sjmisc,
+               sjlabelled)
+
+
+# 1. Cargar datos ---------------------------------------------------------
+
+casen <- read_dta("input/data/Casen en Pandemia 2020 STATA.dta")
+
+# 2. Seleccionar y renombrar variables ------------------------------------
+
+data <- casen %>% 
+  select(exp = expr, #Ponderador regional
+         id = id_persona, #Identificador persona respondiente
+         pobreza, #Situación de pobreza por ingresos
+         prev_salud = s13, #¿A qué sistema previsional de salud pertenece usted? 
+         prev_pens = o31,#¿Se encuentra afiliado a algún sistema previsional?
+         ing_tot_hog = ytoth,#Ingreso total del hogar
+         tot_per) #Total de personas en el hogar 
+
+# 3. Recodificación de variables ------------------------------------------
+
+data <- data %>% 
+  mutate_all(~as.numeric(.)) %>% 
+  mutate(pobreza = car::recode(.$pobreza,
+                               recodes = c("1 = 'Pobres extremos';
+                                           2 = 'Pobres no extremos';
+                                           3 = 'No pobres'"),
+                               as.factor = T, 
+                               levels = c('Pobres extremos',
+                                          'Pobres no extremos',
+                                          'No pobres')),
+         prev_salud = car::recode(.$prev_salud, 
+                                  recodes = c("1 = 'FONASA';
+                                              3 = 'ISAPRE';
+                                              c(2,4,5)= 'Otro';
+                                              9 = NA"),
+         as.factor = T, levels = c('FONASA', 'ISAPRE', 'Otro')),
+         prev_pens = car::recode(.$prev_pens,
+                                 recodes = c("1 = 'Sí';
+                                             2 = 'No';
+                                             9 = NA"),
+         as.factor = T, levels = c('Sí', 'No'))) %>% 
+  na.omit()
+
+# 4. Etiquetado de variables ----------------------------------------------
+
+data$exp <- set_label(data$exp, 'Ponderador regional')
+data$id <- set_label(data$id, 'Identificador persona respondiente')
+data$pobreza <- set_label(data$pobreza, 'Situación de pobreza por ingresos')
+data$prev_salud <- set_label(data$prev_salud, '¿A qué sistema previsional de salud pertenece usted?')
+data$prev_pens <- set_label(data$prev_pens, '¿Se encuentra afiliado a algún sistema previsional?')
+data$ing_tot_hog <- set_label(data$ing_tot_hog, 'Ingreso total del hogar')
+data$tot_per <- set_label(data$tot_per, 'Total de personas en el hogar ')
+
+# 5. Exportar datos -------------------------------------------------------
+
+saveRDS(data, "input/data/casen_proc.rds")
+

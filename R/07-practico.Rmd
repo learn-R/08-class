@@ -1,0 +1,39 @@
+---
+title: "Muestras complejas y precisión de inferencia estadística"
+linktitle: "7: Muestras complejas y precisión de inferencia estadística"
+date: "2021-09-16"
+menu:
+  example:
+    parent: Ejemplos
+    weight: 7
+type: docs
+toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 0. Objetivo del práctico
+
+Este práctico tiene por objetivo introducir el trabajo estadístico con **muestras complejas en R**, así como en la precisión de inferencia estadística. 
+
+## 1. Recursos del práctico
+
+El presente práctico será realizado con datos de la *Encuesta de Caracterización Socioeconómica (CASEN)* en su versión 2020. Estos datos ya han sido previamente procesados para su correcta realización, recodificando casos perdidos, y renombrando y seleccionando variables. 
+
+Recuerden siempre consultar el [**manual/libro de códigos**](http://observatorio.ministeriodesarrollosocial.gob.cl/storage/docs/casen/2020/Libro_de_codigos_Base_de_Datos_Casen_en_Pandemia_2020.pdf) antes de trabajar una base de datos.
+
+## 2. Librerías a utilizar
+
+Utilizaremos las siguientes librerías:
+
+1. `pacman`: para facilitar y agilizar la lectura de los paquetes a utilizar en R
+
+2. `sjmisc`: para explorar datos
+
+
+
+
