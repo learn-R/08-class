@@ -1,27 +1,25 @@
 {
-    "id": "78E4C42D",
-    "path": "~/GitHub/03-class/R/03-practico.Rmarkdown",
+    "id": "146B9D3F",
+    "path": "~/GitHub/05-class/R/05-practico.Rmd",
     "project_path": null,
     "type": "r_markdown",
     "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1631579515736.0,
+    "created": 1631644252894.0,
     "source_on_save": false,
-    "relative_order": 2,
+    "relative_order": 7,
     "properties": {
         "chunk_output_type": "console",
         "source_window_id": "",
-        "Source": "Source",
-        "cursorPosition": "28,79",
-        "scrollLine": "18"
+        "Source": "Source"
     },
     "folds": "",
-    "lastKnownWriteTime": 1630335326,
+    "lastKnownWriteTime": 1630885799,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1630335326,
+    "last_content_update": 1630885799,
     "read_only": false,
     "read_only_alternatives": []
 }

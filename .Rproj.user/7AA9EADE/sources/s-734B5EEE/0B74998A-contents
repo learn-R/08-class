@@ -18,6 +18,7 @@ casen <- read_dta("input/data/Casen en Pandemia 2020 STATA.dta")
 data <- casen %>% 
   select(exp = expr, #Ponderador regional
          id = id_persona, #Identificador persona respondiente
+         region, #Región
          pobreza, #Situación de pobreza por ingresos
          prev_salud = s13, #¿A qué sistema previsional de salud pertenece usted? 
          prev_pens = o31,#¿Se encuentra afiliado a algún sistema previsional?
@@ -46,13 +47,48 @@ data <- data %>%
                                  recodes = c("1 = 'Sí';
                                              2 = 'No';
                                              9 = NA"),
-         as.factor = T, levels = c('Sí', 'No'))) %>% 
+         as.factor = T, levels = c('Sí', 'No')),
+         region = car::recode(.$region,
+                              recodes = c("1 = 'Tarapacá';
+                                          2 = 'Antofagasta';
+                                          3 = 'Atacama';
+                                          4 = 'Coquimbo';
+                                          5 = 'Valparaíso';
+                                          6 = 'OHiggins';
+                                          7 = 'Maule';
+                                          8 = 'Biobío';
+                                          9 = 'La Araucanía';
+                                          10 = 'Los Lagos';
+                                          11 = 'Aysén';
+                                          12 = 'Magallanes';
+                                          13 = 'Metropolitana';
+                                          14 = 'Los Ríos';
+                                          15 = 'Arica y Parinacota';
+                                          16 = 'Ñuble'"),
+                              as.factor = T, 
+                              levels = c('Tarapacá',
+                                         'Antofagasta',
+                                         'Atacama',
+                                         'Coquimbo',
+                                         'Valparaíso',
+                                         'OHiggins',
+                                         'Maule',
+                                         'Biobío',
+                                         'La Araucanía',
+                                         'Los Lagos',
+                                         'Aysén',
+                                         'Magallanes',
+                                         'Metropolitana',
+                                         'Los Ríos',
+                                         'Arica y Parinacota',
+                                         'Ñuble'))) %>% 
   na.omit()
 
 # 4. Etiquetado de variables ----------------------------------------------
 
 data$exp <- set_label(data$exp, 'Ponderador regional')
 data$id <- set_label(data$id, 'Identificador persona respondiente')
+data$region <- set_label(data$region, 'Región')
 data$pobreza <- set_label(data$pobreza, 'Situación de pobreza por ingresos')
 data$prev_salud <- set_label(data$prev_salud, '¿A qué sistema previsional de salud pertenece usted?')
 data$prev_pens <- set_label(data$prev_pens, '¿Se encuentra afiliado a algún sistema previsional?')
