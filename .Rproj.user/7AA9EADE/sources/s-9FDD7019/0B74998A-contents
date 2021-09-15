@@ -21,10 +21,8 @@ data <- casen %>%
          varstrat, #Estrato de varianza
          region, #Región
          pobreza, #Situación de pobreza por ingresos
-         prev_salud = s13, #¿A qué sistema previsional de salud pertenece usted? 
-         prev_pens = o31,#¿Se encuentra afiliado a algún sistema previsional?
-         ing_tot_hog = ytoth,#Ingreso total del hogar
-         tot_per) #Total de personas en el hogar 
+         ing_tot_hog = ytoth)#Ingreso total del hogar
+           
 
 # 3. Recodificación de variables ------------------------------------------
 
@@ -38,17 +36,6 @@ data <- data %>%
                                levels = c('Pobres extremos',
                                           'Pobres no extremos',
                                           'No pobres')),
-         prev_salud = car::recode(.$prev_salud, 
-                                  recodes = c("1 = 'FONASA';
-                                              3 = 'ISAPRE';
-                                              c(2,4,5)= 'Otro';
-                                              9 = NA"),
-         as.factor = T, levels = c('FONASA', 'ISAPRE', 'Otro')),
-         prev_pens = car::recode(.$prev_pens,
-                                 recodes = c("1 = 'Sí';
-                                             2 = 'No';
-                                             9 = NA"),
-         as.factor = T, levels = c('Sí', 'No')),
          region = car::recode(.$region,
                               recodes = c("1 = 'Tarapacá';
                                           2 = 'Antofagasta';
@@ -92,10 +79,8 @@ data$varunit <- set_label(data$varunit, 'Conglomerado de varianza')
 data$varstrat <- set_label(data$varstrat, 'Estrato de varianza')
 data$region <- set_label(data$region, 'Región')
 data$pobreza <- set_label(data$pobreza, 'Situación de pobreza por ingresos')
-data$prev_salud <- set_label(data$prev_salud, '¿A qué sistema previsional de salud pertenece usted?')
-data$prev_pens <- set_label(data$prev_pens, '¿Se encuentra afiliado a algún sistema previsional?')
 data$ing_tot_hog <- set_label(data$ing_tot_hog, 'Ingreso total del hogar')
-data$tot_per <- set_label(data$tot_per, 'Total de personas en el hogar ')
+
 
 # 5. Exportar datos -------------------------------------------------------
 
