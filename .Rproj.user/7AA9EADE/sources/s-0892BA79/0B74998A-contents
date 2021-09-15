@@ -17,7 +17,8 @@ casen <- read_dta("input/data/Casen en Pandemia 2020 STATA.dta")
 
 data <- casen %>% 
   select(exp = expr, #Ponderador regional
-         id = id_persona, #Identificador persona respondiente
+         varunit, #Conglomerado de varianza
+         varstrat, #Estrato de varianza
          region, #Región
          pobreza, #Situación de pobreza por ingresos
          prev_salud = s13, #¿A qué sistema previsional de salud pertenece usted? 
@@ -87,7 +88,8 @@ data <- data %>%
 # 4. Etiquetado de variables ----------------------------------------------
 
 data$exp <- set_label(data$exp, 'Ponderador regional')
-data$id <- set_label(data$id, 'Identificador persona respondiente')
+data$varunit <- set_label(data$varunit, 'Conglomerado de varianza')
+data$varstrat <- set_label(data$varstrat, 'Estrato de varianza')
 data$region <- set_label(data$region, 'Región')
 data$pobreza <- set_label(data$pobreza, 'Situación de pobreza por ingresos')
 data$prev_salud <- set_label(data$prev_salud, '¿A qué sistema previsional de salud pertenece usted?')
