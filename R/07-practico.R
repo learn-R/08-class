@@ -7,7 +7,6 @@
 pacman::p_load(tidyverse, #Universo de paquetes
                sjmisc, #Para explorar datos
                srvyr, #Para trabajar con muestras complejas
-               survey, #Para crear objeto encuesta
                dplyr, #Para manipular datos
                tidyr) #Para transformar la estructura de los datos
 
@@ -34,11 +33,6 @@ descr(data$varunit) #Conglomerado de varianza
 descr(data$ing_tot_hog)
 
 # 4. Crear objeto encuesta ------------------------------------------------
-
-# casen_regional <- svydesign(ids = ~ varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
-#                             strata = ~ varstrat, #los estratos a partir de varstrat,
-#                             weights = ~ exp, #y los ponderadores con exp
-#                             data = data)
 
 casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con la información de data
   as_survey_design(ids = varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
