@@ -3,25 +3,25 @@
     "path": "~/GitHub/07-class/R/07-practico.R",
     "project_path": "R/07-practico.R",
     "type": "r_source",
-    "hash": "2214115718",
+    "hash": "206663304",
     "contents": "",
     "dirty": false,
     "created": 1631727923011.0,
     "source_on_save": false,
-    "relative_order": 11,
+    "relative_order": 2,
     "properties": {
         "tempName": "Untitled2",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "112,7",
-        "scrollLine": "88"
+        "cursorPosition": "73,75",
+        "scrollLine": "58"
     },
     "folds": "",
-    "lastKnownWriteTime": 1631728795,
+    "lastKnownWriteTime": 1632169464,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1631728795780,
+    "last_content_update": 1632169464025,
     "read_only": false,
     "read_only_alternatives": []
 }

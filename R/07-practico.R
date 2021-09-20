@@ -7,6 +7,7 @@
 pacman::p_load(tidyverse, #Universo de paquetes
                sjmisc, #Para explorar datos
                srvyr, #Para trabajar con muestras complejas
+               survey, #Para crear objeto encuesta
                dplyr, #Para manipular datos
                tidyr) #Para transformar la estructura de los datos
 
@@ -27,11 +28,17 @@ frq(data$pobreza)
 ## Variables cuantitativas
 
 descr(data$exp) #Ponderador regional
+sum(data$exp)
 descr(data$varstrat) #Estrato de varianza
 descr(data$varunit) #Conglomerado de varianza
 descr(data$ing_tot_hog)
 
 # 4. Crear objeto encuesta ------------------------------------------------
+
+# casen_regional <- svydesign(ids = ~ varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
+#                             strata = ~ varstrat, #los estratos a partir de varstrat,
+#                             weights = ~ exp, #y los ponderadores con exp
+#                             data = data)
 
 casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con la información de data
   as_survey_design(ids = varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
@@ -42,7 +49,12 @@ casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con l
 
 ## Cálculo simple
 casen_regional %>% #Con casen_regional
-  summarise(ing_medio = survey_mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
+  summarize(ing_medio = srvyr::survey_mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
+
+## Comparemos
+data %>% #Con casen_regional
+  summarise(ing_medio = mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
+
 
 ## Con Intervalos de confianza al 95%
 casen_regional %>%#Con casen_regional
@@ -50,6 +62,17 @@ casen_regional %>%#Con casen_regional
                                                                            #ingreso medio poblacional, 
                                                                            #y sus intervalos de confianza
 
+## Con Intervalos de confianza al 95%
+casen_regional %>%#Con casen_regional
+  summarise(ing_medio95 = survey_mean(ing_tot_hog, vartype = "ci", level = .95, na.rm=T), #Al 95%
+            ing_medio99 = survey_mean(ing_tot_hog, vartype = "ci", level = .99, na.rm=T)) #Al 99%
+
+## Agrupando por sexo
+casen_regional %>% #Con casen_regional
+  group_by(sexo) %>% #Agrupamos por region
+  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio 
+                                                                           #poblacional, y sus intervalos de 
+                                                                           #confianza
 ## Agrupando por región
 casen_regional %>% #Con casen_regional
   group_by(region) %>% #Agrupamos por region
@@ -59,11 +82,12 @@ casen_regional %>% #Con casen_regional
 
 ## Crear dataframe pivoteando datos
 ing_region <- casen_regional %>% 
-  group_by(region) %>% #Agrupamos por region
+  group_by(sexo) %>% #Agrupamos por region
   summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) %>% #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
   select(region, ing_medio) %>% #Seleccionamos region e ing_medio
   pivot_wider(names_from = "region", #Pivoteamos, extrayendo los nombres de las columnas desde region
               values_from = "ing_medio") #Y los valores desde ing_medio
+
 head(ing_region) #Visualizamos
 
 
@@ -73,6 +97,15 @@ head(ing_region) #Visualizamos
 casen_regional %>% #Con casen_regional
   group_by(pobreza) %>% #Agrupamos por pobreza
   summarise(prop = survey_prop(na.rm = T)) #Y calculamos las proprciones
+
+## Con survey_mean
+casen_regional %>% #Con casen_regional
+  group_by(pobreza) %>% #Agrupamos por pobreza
+  summarise(prop = survey_mean(na.rm = T)) #Y calculamos las proprciones
+
+## Cálculo simple
+casen_regional %>% #Con casen_regional
+  summarise(prop = survey_prop(pobreza, na.rm = T)) #Y calculamos las proprciones
 
 ## Transformando a porcentaje
 casen_regional %>% #Con casen_regional
@@ -118,3 +151,5 @@ pobreza_reg <- casen_regional %>% #Creamos un objeto llamado pobreza_reg con dat
   select(region, pobreza, per, total) %>% #Seleccionamos region, pobreza, per y total
   pivot_wider(names_from = "pobreza", #Pivoteamos a lo ancho, extrayendo los nombres de las columnas desde pobreza
               values_from = c("per", "total")) #y los valores desde per y total
+sjPlot::tab_df(pobreza_reg
+               )

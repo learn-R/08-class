@@ -21,7 +21,8 @@ data <- casen %>%
          varstrat, #Estrato de varianza
          region, #Región
          pobreza, #Situación de pobreza por ingresos
-         ing_tot_hog = ytoth)#Ingreso total del hogar
+         ing_tot_hog = ytoth, #Ingreso total del hogar
+         sexo)
            
 
 # 3. Recodificación de variables ------------------------------------------
@@ -69,7 +70,9 @@ data <- data %>%
                                          'Metropolitana',
                                          'Los Ríos',
                                          'Arica y Parinacota',
-                                         'Ñuble'))) %>% 
+                                         'Ñuble')),
+         sexo = car::recode(.$sexo, recodes = c("1 = 'Hombre'; 2 = 'Mujer'"),
+                            as.factor = T, levels = c("Hombre", "Mujer"))) %>% 
   na.omit()
 
 # 4. Etiquetado de variables ----------------------------------------------
@@ -80,6 +83,7 @@ data$varstrat <- set_label(data$varstrat, 'Estrato de varianza')
 data$region <- set_label(data$region, 'Región')
 data$pobreza <- set_label(data$pobreza, 'Situación de pobreza por ingresos')
 data$ing_tot_hog <- set_label(data$ing_tot_hog, 'Ingreso total del hogar')
+data$sexo <- set_label(data$sexo, 'Sexo')
 
 
 # 5. Exportar datos -------------------------------------------------------
