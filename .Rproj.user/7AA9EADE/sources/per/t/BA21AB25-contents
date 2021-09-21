@@ -10,7 +10,6 @@ pacman::p_load(tidyverse, #Universo de paquetes
                dplyr, #Para manipular datos
                tidyr) #Para transformar la estructura de los datos
 
-options(survey.lonely.psu = "certainty") #Definir que los valores ajustados están definidos por estratos
 
 # 2. Cargar datos ---------------------------------------------------------
 
@@ -23,11 +22,12 @@ head(data)
 
 frq(data$region) 
 frq(data$pobreza)
+frq(data$sexo)
 
 ## Variables cuantitativas
 
 descr(data$exp) #Ponderador regional
-sum(data$exp)
+sum(data$exp) #Total de la población
 descr(data$varstrat) #Estrato de varianza
 descr(data$varunit) #Conglomerado de varianza
 descr(data$ing_tot_hog)
@@ -46,8 +46,8 @@ casen_regional %>% #Con casen_regional
   summarize(ing_medio = srvyr::survey_mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
 
 ## Comparemos
-data %>% #Con casen_regional
-  summarise(ing_medio = mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
+data %>% #Con data
+  summarise(ing_medio = mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio muestral
 
 
 ## Con Intervalos de confianza al 95%
@@ -56,14 +56,14 @@ casen_regional %>%#Con casen_regional
                                                                            #ingreso medio poblacional, 
                                                                            #y sus intervalos de confianza
 
-## Con Intervalos de confianza al 95%
-casen_regional %>%#Con casen_regional
+## Con Intervalos de confianza al 95% y al 99%
+casen_regional %>% #Con casen_regional
   summarise(ing_medio95 = survey_mean(ing_tot_hog, vartype = "ci", level = .95, na.rm=T), #Al 95%
             ing_medio99 = survey_mean(ing_tot_hog, vartype = "ci", level = .99, na.rm=T)) #Al 99%
 
 ## Agrupando por sexo
 casen_regional %>% #Con casen_regional
-  group_by(sexo) %>% #Agrupamos por region
+  group_by(sexo) %>% #Agrupamos por sexo
   summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio 
                                                                            #poblacional, y sus intervalos de 
                                                                            #confianza
@@ -89,17 +89,17 @@ head(ing_region) #Visualizamos
 
 ## Cálculo simple
 casen_regional %>% #Con casen_regional
+  summarise(prop = survey_prop(pobreza, na.rm = T)) #Y calculamos las proporciones
+
+## Cálculo simple
+casen_regional %>% #Con casen_regional
   group_by(pobreza) %>% #Agrupamos por pobreza
-  summarise(prop = survey_prop(na.rm = T)) #Y calculamos las proprciones
+  summarise(prop = survey_prop(na.rm = T)) #Y calculamos las proporciones
 
 ## Con survey_mean
 casen_regional %>% #Con casen_regional
   group_by(pobreza) %>% #Agrupamos por pobreza
-  summarise(prop = survey_mean(na.rm = T)) #Y calculamos las proprciones
-
-## Cálculo simple
-casen_regional %>% #Con casen_regional
-  summarise(prop = survey_prop(pobreza, na.rm = T)) #Y calculamos las proprciones
+  summarise(prop = survey_mean(na.rm = T)) #Y calculamos las proporciones
 
 ## Transformando a porcentaje
 casen_regional %>% #Con casen_regional
@@ -136,6 +136,13 @@ casen_regional %>% #Con casen_regional
          prop_low = prop_low*100, #así como el límite inferior 
          prop_upp = prop_upp*100) #y superior, para obtener porcentajes
 
+## Cruzar dos variables
+casen_regional %>% #Creamos un objeto llamado pobreza_reg con datos de casen_regional
+  group_by(pobreza, sexo) %>% #Agrupamos por pobreza y sexo
+  summarise(prop = survey_prop(vartype = "ci", na.rm = T), #Calculamos las proporciones con intervalos de confianza
+            total = survey_total(vartype = "ci", na.rm=T)) %>% #Así como el total por categoría
+  mutate(prop = prop*100)
+
 ## Crear objeto wide
 pobreza_reg <- casen_regional %>% #Creamos un objeto llamado pobreza_reg con datos de casen_regional
   group_by(region, pobreza) %>% #Agrupamos por region y pobreza
@@ -145,5 +152,5 @@ pobreza_reg <- casen_regional %>% #Creamos un objeto llamado pobreza_reg con dat
   select(region, pobreza, per, total) %>% #Seleccionamos region, pobreza, per y total
   pivot_wider(names_from = "pobreza", #Pivoteamos a lo ancho, extrayendo los nombres de las columnas desde pobreza
               values_from = c("per", "total")) #y los valores desde per y total
-sjPlot::tab_df(pobreza_reg
-               )
+
+head(pobreza_reg)

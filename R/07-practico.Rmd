@@ -18,11 +18,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## 0. Objetivo del práctico
 
-Este práctico tiene por objetivo introducir el trabajo estadístico con **muestras complejas en R**, es decir, cuando se trabaja con muestras que busquen ser representativas de la población a estudiar, bajo determinados parámetros. Buscaremos calcular estimadores puntuales e intervalos de confianza, que nos permite reportar el error asociado a la inferencia. 
+Este práctico tiene por objetivo introducir el trabajo estadístico con **muestras complejas en R**, es decir, cuando se trabaja con muestras que busquen ser representativas de la población a estudiar, bajo determinados parámetros. Buscaremos calcular estimadores puntuales e intervalos de confianza, que nos permiten reportar el error asociado a la inferencia. 
 
 ## 1. Recursos del práctico
 
-El presente práctico será realizado con datos de la *Encuesta de Caracterización Socioeconómica (CASEN)* en su versión 2020. Estos datos ya han sido previamente procesados para su correcta realización, recodificando casos perdidos, y renombrando y seleccionando variables. 
+El presente práctico será realizado con datos de la *Encuesta de Caracterización Socioeconómica (CASEN)* en su versión 2020. Estos datos ya han sido previamente procesados para su correcta realización, recodificando y eliminando casos perdidos, y renombrando y seleccionando variables. Esto es **muy importante**: para trabajar correctamente con muestreos complejos, **deben** asegurarse de que los datos estén bien preparados para ello. 
 
 Recuerden siempre consultar el [**manual/libro de códigos**](http://observatorio.ministeriodesarrollosocial.gob.cl/storage/docs/casen/2020/Libro_de_codigos_Base_de_Datos_Casen_en_Pandemia_2020.pdf) antes de trabajar una base de datos.
 
@@ -38,9 +38,13 @@ Utilizaremos las siguientes librerías:
 
 4. `dplyr`: para manipular datos
 
+5. `tidyr`: para pivotear la estructura de los datos
+
 # Pasos del procesamiento
 
 ## 1. Cargar librerías
+
+Cargamos los paquetes anteriormente señalados:
 
 ```{r packages}
 pacman::p_load(tidyverse,
@@ -48,7 +52,6 @@ pacman::p_load(tidyverse,
                srvyr,
                dplyr,
                tidyr)
-options(survey.lonely.psu = "certainty") #Definir que los valores ajustados están definidos por estratos
 ```
 
 
@@ -56,17 +59,22 @@ options(survey.lonely.psu = "certainty") #Definir que los valores ajustados est�
 
 Como se señaló anteriormente, trabajaremos con datos de CASEN 2020, ya procesados con anterioridad
 
-```{r readRDS}
+```{r readRDS, include=F}
 data <- readRDS("input/data/casen_proc.rds")
 ```
 
-Como podemos ver, estos datos tienen 147.239 filas (observaciones), así como 8 columnas. Inspeccionemos: 
+```{r dim}
+dim(data)
+```
+
+
+Como podemos ver, estos datos tienen 185.339 filas (observaciones), así como 7 columnas. Inspeccionemos: 
 
 ```{r head1}
 head(data)
 ```
 
-Tenemos tanto variables numéricas (exp, id, ing_tot_hog y tot_per) como factores (region, pobreza, prev_salud y prev_pens). ¡Explorémoslas!
+Tenemos tanto variables numéricas (exp, varunit, varstrat e ing_tot_hog) como factores (region, pobreza y sexo). ¡Explorémoslas!
 
 ## 3. Explorar datos
 
@@ -75,24 +83,25 @@ Con `frq()` de `sjmisc`, exploraremos las categorías de las variables factor:
 ```{r frq1}
 frq(data$region)
 frq(data$pobreza)
+frq(data$sexo)
 ```
 
-Como podemos ver, *region* provee información sobre la región a la que pertenecen los hogares; y *pobreza* nos provee información respecto de la situación de pobreza por ingresos (o no) de los hogares. 
+Como podemos ver, *region* provee información sobre la región a la que pertenecen los hogares; *pobreza* nos provee información respecto de la situación de pobreza por ingresos (o no) de los hogares; y *sexo*, información sobre el sexo de la persona que responde el cuestionario. 
 
 Ahora vamos con `descr()` de `sjmisc` para las variables numéricas
 
 ```{r descr1}
-descr(data$exp)
-descr(data$varstrat)
-descr(data$varunit)
+descr(data$exp) #Ponderador regional
+sum(data$exp) #Total de la población
+descr(data$varstrat) #Estrato de varianza
+descr(data$varunit) #Conglomerado de varianza
 descr(data$ing_tot_hog)
 ```
 
-*ing_tot_hog* presenta información respecto de los ingresos totales de los hogares; *varstrat* provee información sobre el estrato de varianza; y *varunit* sobre el conglomerado de varianza, es decir, la unidad mínima de observación que, en este caso, son los hogares. Estas últimas tres variables serán **sumamente relevantes** para este práctico. 
-
+*ing_tot_hog* presenta información respecto de los ingresos totales de los hogares; *exp* es el ponderador regional, cuya suma es el número total de habitantes de la población objetivo; *varstrat* provee información sobre el estrato de varianza; y *varunit* sobre el conglomerado de varianza, es decir, la unidad mínima de observación que, en este caso, son los hogares. Estas últimas tres variables serán **sumamente relevantes** para este práctico. 
 ## 4. Cálculo con muestras complejas
 
-Una vez explorados nuestros datos, es hora de empezar a realizar nuestros cálculos con muestras complejas. Para ello, lo primero es crear un objeto encuesta de modo que, posteriormente, podamos calcular promedios con nuestras variables cuantitativas, y proporciones para nuestras variables categóricas. 
+Una vez explorados nuestros datos, es hora de empezar a realizar nuestros cálculos con muestras complejas. Para ello, lo primero es crear un **objeto encuesta** de modo que, posteriormente, podamos calcular promedios con nuestras variables cuantitativas, y proporciones para nuestras variables categóricas (entre muchos otros estimadores). 
 
 ### a) Creación de objeto encuesta (srvyr)
 
@@ -105,46 +114,96 @@ casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con l
                    weights = exp) #y los ponderadores con exp
 ```
 
-Fijándonos en nuestro entorno, nos daremos cuenta de que se creó una lista con 9 elementos llamada **casen_regional**. Si bien la información que nos entrega por sí sólo nos resulta algo críptica, este objeto nos permitirá realizar cálculos aplicando las variables de diseño muestral complejo. Algo interesante de los objetos encuesta creados con `srvyr`, es que podemos interactuar con las funciones de `dplyr`, como `group_by()` o `summarise()`. 
+Fijándonos en nuestro entorno, nos daremos cuenta de que se creó una lista con 9 elementos llamada **casen_regional**. Si bien la información que nos entrega por sí sólo nos resulta algo críptica, este objeto nos permitirá realizar cálculos aplicando las variables de diseño muestral complejo. Algo interesante de los objetos encuesta creados con `srvyr`, es que podemos interactuar con las funciones de `dplyr`, como `group_by()` o `summarise()`. Es decir, **nos permite trabajar con listas como si fueran un data frame** (datos tabulados) incluyendo, por ejemplo, el uso de *metadata*.
+
+```{r list_image}
+knitr::include_graphics("input/img/img-list.png")
+```
+
+*cluster* nos presenta información sobre los conglomerados de varianza, o la unidad mínima de inferencia. *strata*, sobre los estratos de varianza, unidades que integran a los conglomerados de varianza. *prob* y *allprob* proveen información sobre la probabilidad de cada sujeto de ser seleccionado en una muestra al azar. *variables* nos presenta todas las variables incluidas en la lista. Por último, *fpc* provee información sobre los tamaños de la población y la muestra. 
 
 ### b) Cálculo de medias para variables numéricas
 
-Ya una vez que tenemos creado nuestro objeto encuesta, podemos realizar diversos tipos de cálculos. Calculemos, por ejemplo, la media de ingresos a nivel poblacional, con la función `survey_mean()` de `srvyr`
+Una vez creado nuestro objeto encuesta, podemos realizar diversos tipos de cálculos. Calculemos, por ejemplo, la media de ingresos a nivel poblacional, con la función `survey_mean()` de `srvyr`
 
 ```{r mean_num}
 casen_regional %>% #Con casen_regional
   summarise(ing_medio = survey_mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
 ```
 
-También es posible, por ejemplo, incorporar intervalos de confianza:
+Comparemos con la media calculada a nivel muestral:
+
+```{r no_enc}
+data %>% #Con data
+  summarise(ing_medio = mean(ing_tot_hog, na.rm=T)) #Calculamos el ingreso medio poblacional
+```
+
+Efectivamente, la estimación a nivel poblacional (o parámetro) es superior a la estimación muestral. Sin embargo, trabajar con muestras complejas siempre significará considerar un posible **error de medición**. El trabajar con muestras representativas (aunque no sean aleatorias) nos permitirá realizar nuestros cálculos, conociendo la probabilidad de equivocarnos en nuestra estimación. Es decir, podemos conocer el **nivel de confianza** (o el **nivel de error**) de nuestras estimaciones, a partir de ciertas características de la muestra.
+
+En virtud de ello, `survey_mean()` también nos permite incorporar los intervalos de confianza, especificando `vartype = "ci"`:
 
 ```{r mean_num_ci}
 casen_regional %>%#Con casen_regional
-  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
+  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el 
+                                                                           #ingreso medio poblacional, 
+                                                                           #y sus intervalos de confianza
 ```
 
-Asimismo, es posible calcular la media de ingresos agrupando por región
+El argumento `level = ` nos permite especificar el nivel de confianza que estamos dispuestas/os a aceptar. Comparemos el cálculo de la media de ingresos a un 95% y a un 99% de confianza
+
+```{r ci_95_99}
+casen_regional %>% #Con casen_regional
+  summarise(ing_medio95 = survey_mean(ing_tot_hog, vartype = "ci", level = .95, na.rm=T), #Al 95%
+            ing_medio99 = survey_mean(ing_tot_hog, vartype = "ci", level = .99, na.rm=T)) #Al 99%
+```
+
+Trabajar con un mayor nivel de confianza nos permitirá estar más seguras/os de que nuestra estimación incluirá al parámetro poblacional. Sin embargo, esto no es gratis: un mayor nivel de confianza implica una **pérdida de precisión** en nuestros cálculos; y viceversa. Es decir, un mayor nivel de confianza ampliará los límites inferior y superior de nuestros intervalos de confianza, lo cual hace la estimación menos precisa, mientras que un menor nivel de confianza estrechará tales límites, haciendo la estimación más precisa. Sin embargo, en el primer caso, la probabilidad de contener al parámetro poblacional es mayor que en el segundo. La decisión del nivel de confianza con el cual trabajaremos dependerá de qué es lo que queramos calcular, y no es objeto de este curso. 
+
+También es posible utilizar `group_by()` para calcular la media de ingresos (y sus intervalos de confianza) según sexo:
+
+```{r mean_num_sexo}
+casen_regional %>% #Con casen_regional
+  group_by(sexo) %>% #Agrupamos por sexo
+  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio 
+                                                                           #poblacional, y sus intervalos de 
+                                                                           #confianza
+```
+
+
+Asimismo, es posible calcular la media de ingresos agrupando por región: 
 
 ```{r mean_num_byregion}
 casen_regional %>% #Con casen_regional
   group_by(region) %>% #Agrupamos por region
-  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
+  summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) #Calculamos el ingreso medio 
+                                                                           #poblacional, y sus intervalos de 
+                                                                           #confianza
 ```
 
 ¿Y si quisiéramos crear una tabla con una columna por región, cuyas observaciones nos indiquen la media de ingreso para cada una de ellas? ¡Simplemente acudimos a `pivot_wider()` de `tidyr`!
 
 ```{r wide_num}
 ing_region <- casen_regional %>% 
-  group_by(region) %>% #Agrupamos por region
+  group_by(sexo) %>% #Agrupamos por region
   summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) %>% #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
   select(region, ing_medio) %>% #Seleccionamos region e ing_medio
   pivot_wider(names_from = "region", #Pivoteamos, extrayendo los nombres de las columnas desde region
               values_from = "ing_medio") #Y los valores desde ing_medio
+
 head(ing_region) #Visualizamos
 ```
 
 
 ### c) Cálculo de proporciones para variables categóricas
+
+También podemos utilizar la función `survey_prop()` de `srvyr` para calcular proporciones. Sin embargo, el código para calcular proporciones de variables categóricas **no se construye de la misma manera** que el código para calcular medias de variables continuas:
+
+```{r error, warning=TRUE}
+casen_regional %>% #Con casen_regional
+  summarise(prop = survey_prop(pobreza, na.rm = T)) #Y calculamos las proporciones
+```
+
+Debemos recurrir a `group_by()` para especificar nuestra variable categórica, y luego realizar el cálculo en `summarise()`
 
 ```{r prop_factor}
 casen_regional %>% #Con casen_regional
@@ -152,12 +211,24 @@ casen_regional %>% #Con casen_regional
   summarise(prop = survey_prop(na.rm = T)) #Y calculamos las proporciones
 ```
 
+De todos modos, hay que considerar que `survey_prop()` y `survey_mean()` son (hasta cierto punto) intercambiables:
+
+```{r mean_factor}
+casen_regional %>% #Con casen_regional
+  group_by(pobreza) %>% #Agrupamos por pobreza
+  summarise(prop = survey_mean(na.rm = T)) #Y calculamos las proporciones
+```
+
+Muchas veces nos interesa más trabajar con porcentajes que con proporciones. Con `mutate()` podemos multiplicar por 100 nuestras proporciones, y así obtener los porcentajes deseados
+
 ```{r per_factor}
 casen_regional %>% #Con casen_regional
   group_by(pobreza) %>% #Agrupamos por pobreza
   summarise(prop = survey_prop(na.rm = T))%>% #Calculamos las proporciones
   mutate(per = prop*100) #Creamos una nueva columna multiplicando las proporciones *100 para obtener porcentajes
 ```
+
+La función `survey_total()` de `srvyr` nos permite calcular el total de personas en cada categoría a **nivel poblacional**.
 
 ```{r per_tot_factor}
 casen_regional %>% #Con casen_regional
@@ -167,11 +238,15 @@ casen_regional %>% #Con casen_regional
   mutate(per = prop*100) #Creamos una nueva columna multiplicando las proporciones *100 para obtener porcentajes
 ```
 
+Por supuesto, también es posible incorporar intervalos de confianza, tal como cuando calculamos medias
+
 ```{r prop_factor_ci}
 casen_regional %>% #Con casen_regional
   group_by(pobreza) %>% #Agrupamos por pobreza
   summarise(prop = survey_prop(vartype = "ci", na.rm = T)) #Incorporamos intervalos de confianza
 ```
+
+Y, además, podemos convertir en porcentajes nuestros intervalos de confianza, tal como lo hicimos con la estimación puntual
 
 ```{r per_factor_ci}
 casen_regional %>% #Con casen_regional
@@ -181,6 +256,8 @@ casen_regional %>% #Con casen_regional
          prop_low = prop_low*100, #así como el límite inferior 
          prop_upp = prop_upp*100) #y superior, para obtener porcentajes
 ```
+
+Incluimos el total
 
 ```{r per_tot_factor_ci}
 casen_regional %>% #Con casen_regional
@@ -192,6 +269,17 @@ casen_regional %>% #Con casen_regional
          prop_upp = prop_upp*100) #y superior, para obtener porcentajes
 ```
 
+También podemos cruzar dos variables. Veamos, por ejemplo, cómo se distribuye la pobreza según sexo
+
+```{r pobreza_sexo}
+casen_regional %>% #Creamos un objeto llamado pobreza_reg con datos de casen_regional
+  group_by(pobreza, sexo) %>% #Agrupamos por pobreza y sexo
+  summarise(prop = survey_prop(vartype = "ci", na.rm = T), #Calculamos las proporciones con intervalos de confianza
+            total = survey_total(vartype = "ci", na.rm=T)) %>% #Así como el total por categoría
+  mutate(prop = prop*100)
+```
+
+Por último, podemos crear una tabla ancha (wide) con `pivot_wider()` de `tidyr` para trabajar con nuestros cálculos de forma más cómoda en un data frame 
 
 ```{r wide_factor}
 pobreza_reg <- casen_regional %>% #Creamos un objeto llamado pobreza_reg con datos de casen_regional
@@ -202,6 +290,19 @@ pobreza_reg <- casen_regional %>% #Creamos un objeto llamado pobreza_reg con dat
   select(region, pobreza, per, total) %>% #Seleccionamos region, pobreza, per y total
   pivot_wider(names_from = "pobreza", #Pivoteamos a lo ancho, extrayendo los nombres de las columnas desde pobreza
               values_from = c("per", "total")) #y los valores desde per y total
+
+head(pobreza_reg)
 ```
 
+## 5. Resumen
 
+¡Y eso es todo! En este práctico aprendimos a:
+
+1. Crear un objeto encuesta
+2. Realizar cálculos de medias a nivel poblacional para variables continuas
+3. Realizar cálculos de proporciones y cantidades a nivel poblacional para variables categóricas
+4. Crear una tabla ancha (wide) para trabajar nuestros cálculos.
+
+## 6. Reporte de progreso
+
+¡Recuerda rellenar tu [reporte de progreso](https://learn-r.formr.org/). En tu correo electrónico está disponible el código mediante al cuál debes acceder para actualizar tu estado de avance del curso.
