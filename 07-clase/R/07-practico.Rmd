@@ -7,9 +7,11 @@ menu:
     parent: Ejemplos
     weight: 7
 type: docs
-toc: true
 editor_options: 
   chunk_output_type: console
+output: 
+  html_document: 
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -60,7 +62,7 @@ pacman::p_load(tidyverse,
 Como se señaló anteriormente, trabajaremos con datos de CASEN 2020, ya procesados con anterioridad
 
 ```{r readRDS, include=F}
-data <- readRDS("input/data/casen_proc.rds")
+data <- readRDS(gzcon(url("https://github.com/learn-R/07-class/blob/main/input/data/casen_proc.rds?raw=true")))
 ```
 
 ```{r dim}
@@ -105,20 +107,27 @@ Una vez explorados nuestros datos, es hora de empezar a realizar nuestros cálcu
 
 ### a) Creación de objeto encuesta (srvyr)
 
-Como ya se señaló, lo primero es crear un **objeto encuesta (survey)**. Este corresponde a una lista (*List*) que nos permitirá realizar los cálculos que deseemos, considerando las varables de diseño (en este caso, varunit, varstrat y exp). Para ello, utilizaremos la función `as_survey_design()` de la librería `srvyr`
+Como ya se señaló, lo primero es crear un **objeto encuesta (survey)**. Este corresponde a una lista (*List*) que nos permitirá realizar los cálculos que deseemos, considerando las varables de diseño (en este caso, varunit, varstrat y exp). Para ello, utilizaremos la función `as_survey_design()` de la librería `srvyr`. Sin embargo, primero crearemos la variable *stratn*, para obtener la cantidad de personas por estrato a nivel poblacional
+
+```{r stratn}
+data <- data %>% 
+  group_by(varstrat) %>% #Agrupando por varstrat
+  mutate(stratn = sum(exp)) #Calculamos el total de personas por estrato
+```
+
+Construimos el objeto encuesta:
 
 ```{r srvyr}
 casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con la información de data
   as_survey_design(ids = varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
-                   strata = varstrat, #los estratos a partir de varstrat,
+                   strata = varstrat,#los estratos a partir de varstrat,
+                   fpc = stratn, #especificando que la estimación es con una población finita
                    weights = exp) #y los ponderadores con exp
 ```
 
 Fijándonos en nuestro entorno, nos daremos cuenta de que se creó una lista con 9 elementos llamada **casen_regional**. Si bien la información que nos entrega por sí sólo nos resulta algo críptica, este objeto nos permitirá realizar cálculos aplicando las variables de diseño muestral complejo. Algo interesante de los objetos encuesta creados con `srvyr`, es que podemos interactuar con las funciones de `dplyr`, como `group_by()` o `summarise()`. Es decir, **nos permite trabajar con listas como si fueran un data frame** (datos tabulados) incluyendo, por ejemplo, el uso de *metadata*.
 
-```{r list_image}
-knitr::include_graphics("input/img/img-list.png")
-```
+![](https://github.com/learn-R/07-class/raw/main/input/img/img-list.png)
 
 *cluster* nos presenta información sobre los conglomerados de varianza, o la unidad mínima de inferencia. *strata*, sobre los estratos de varianza, unidades que integran a los conglomerados de varianza. *prob* y *allprob* proveen información sobre la probabilidad de cada sujeto de ser seleccionado en una muestra al azar. *variables* nos presenta todas las variables incluidas en la lista. Por último, *fpc* provee información sobre los tamaños de la población y la muestra. 
 
@@ -186,8 +195,8 @@ casen_regional %>% #Con casen_regional
 ing_region <- casen_regional %>% 
   group_by(sexo) %>% #Agrupamos por region
   summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) %>% #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
-  select(region, ing_medio) %>% #Seleccionamos region e ing_medio
-  pivot_wider(names_from = "region", #Pivoteamos, extrayendo los nombres de las columnas desde region
+  select(sexo, ing_medio) %>% #Seleccionamos region e ing_medio
+  pivot_wider(names_from = "sexo", #Pivoteamos, extrayendo los nombres de las columnas desde region
               values_from = "ing_medio") #Y los valores desde ing_medio
 
 head(ing_region) #Visualizamos
@@ -198,7 +207,7 @@ head(ing_region) #Visualizamos
 
 También podemos utilizar la función `survey_prop()` de `srvyr` para calcular proporciones. Sin embargo, el código para calcular proporciones de variables categóricas **no se construye de la misma manera** que el código para calcular medias de variables continuas:
 
-```{r error, warning=TRUE}
+```{r error, warning=TRUE, eval=FALSE}
 casen_regional %>% #Con casen_regional
   summarise(prop = survey_prop(pobreza, na.rm = T)) #Y calculamos las proporciones
 ```

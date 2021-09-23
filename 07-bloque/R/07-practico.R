@@ -34,9 +34,14 @@ descr(data$ing_tot_hog)
 
 # 4. Crear objeto encuesta ------------------------------------------------
 
+data <- data %>% 
+  group_by(varstrat) %>% #Agrupando por varstrat
+  mutate(stratn = sum(exp)) #Calculamos el total de personas por estrato
+
 casen_regional <- data %>% #Creamos un nuevo objeto llamado casen_regional con la información de data
   as_survey_design(ids = varunit, #Aplicamos diseño muestral, especificando los ids a partir de varunit,
-                   strata = varstrat, #los estratos a partir de varstrat,
+                   strata = varstrat,#los estratos a partir de varstrat,
+                   fpc = stratn, #especificando que la estimación es con una población finita
                    weights = exp) #y los ponderadores con exp
 
 # 5. Cálculo de medias para variables cuantitativas -----------------------
@@ -78,8 +83,8 @@ casen_regional %>% #Con casen_regional
 ing_region <- casen_regional %>% 
   group_by(sexo) %>% #Agrupamos por region
   summarise(ing_medio = survey_mean(ing_tot_hog, vartype = "ci", na.rm=T)) %>% #Calculamos el ingreso medio poblacional, y sus intervalos de confianza
-  select(region, ing_medio) %>% #Seleccionamos region e ing_medio
-  pivot_wider(names_from = "region", #Pivoteamos, extrayendo los nombres de las columnas desde region
+  select(sexo, ing_medio) %>% #Seleccionamos region e ing_medio
+  pivot_wider(names_from = "sexo", #Pivoteamos, extrayendo los nombres de las columnas desde region
               values_from = "ing_medio") #Y los valores desde ing_medio
 
 head(ing_region) #Visualizamos
