@@ -13,7 +13,7 @@ pacman::p_load(tidyverse, #Universo de paquetes
 
 # 2. Cargar datos ---------------------------------------------------------
 
-data <- readRDS("input/data/casen_proc.rds")
+data <- readRDS(url("https://github.com/learn-R/07-class/blob/main/input/data/casen_proc.rds?raw=true"))
 head(data)
 
 # 3. Explorar datos -------------------------------------------------------
